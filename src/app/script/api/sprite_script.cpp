@@ -221,6 +221,38 @@ public:
       return {};
     };
 
+    clazz.addMethod("moveFrame") = [](SpriteSite&, double frame, double beforeFrame) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      const int f = static_cast<int>(frame);
+      const int before = static_cast<int>(beforeFrame);
+      if (f < 0 || f >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      if (before < 0 || before > spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).moveFrame(spr, (doc::frame_t)f, (doc::frame_t)before);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("copyFrame") = [](SpriteSite&, double fromFrame, JSON::Value& newFrameValue) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      const int from = static_cast<int>(fromFrame);
+      if (from < 0 || from >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      const int newFrame = newFrameValue.isUndefined()
+        ? spr->totalFrames()
+        : static_cast<int>(newFrameValue);
+      if (newFrame < 0 || newFrame > spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).copyFrame(spr, (doc::frame_t)from, (doc::frame_t)newFrame);
+      tx.commit();
+      return (double)newFrame;
+    };
+
     clazz.addMethod("removeLayer") = [](SpriteSite&, JSON::Value& value) -> JSON::Value {
       if (!value.isNative())
         throw std::runtime_error{"removeLayer() requires a Layer"};
