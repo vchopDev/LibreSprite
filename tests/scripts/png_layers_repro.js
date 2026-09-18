@@ -1,12 +1,17 @@
-// Minimal reproducer for the libresprite-mcp asset-pipeline blocker:
-// open a PNG -> rename layer 0 -> create N layers -> saveAs .ase -> reopen.
-// Mirrors what libresprite-mcp/scripts/create_layered_sources.py generates.
+// Minimal reproducer for a class of asset-pipeline blocker: open a PNG,
+// rename layer 0, create N layers via sprite.newLayer(), saveAs .ase, reopen.
+// Mirrors the shape of a generic "PNG -> layered .ase" scripting workflow
+// without depending on any external project's asset tree.
+//
+// Uses data/splash.png, the PNG sibling of the data/splash.ase fixture
+// already used by tests/scripts/document_api.js and frame_tags.js, so this
+// test is self-contained and portable to any checkout of this repo.
 //
 // Run from the LibreSprite source directory with:
 //   libresprite -b --script tests/scripts/png_layers_repro.js
 // Requires C:\msys64\ucrt64\bin on PATH for an MSYS2-built binary.
 
-const input = "C:/Users/victo/Projects/AI-Projects/Strategic-War-Game/warhex/assets/art/units/archer_ice_v1.0.3.png";
+const input = "data/splash.png";
 const output = "build-codex-ucrt/png-layers-repro.ase";
 
 function assert(condition, message) {

@@ -10,6 +10,10 @@
 #include "di.hpp"
 #include "app/script/api/script_api_common.h"
 
+#include "app/document.h"
+#include "app/document_api.h"
+#include "app/transaction.h"
+#include "app/ui_context.h"
 #include "doc/cel.h"
 #include "doc/image.h"
 
@@ -58,7 +62,11 @@ public:
       const int opacity = static_cast<int>(v);
       if (opacity < 0 || opacity > 255)
         throw std::runtime_error{"Cel opacity must be between 0 and 255"};
-      cel.setOpacity(opacity);
+      auto* doc = static_cast<app::Document*>(cel.document());
+      auto* spr = cel.sprite();
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).setCelOpacity(spr, script_api::wrap(&cel), opacity);
+      tx.commit();
     };
   }
 };
