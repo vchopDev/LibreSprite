@@ -24,3 +24,10 @@ build
 /.cache/
 *~
 /android/
+
+# Our own working copy of SCRIPTING.md, kept up to date with fork-only
+# bindings without touching the tracked upstream file. Never committed.
+/SCRIPTING.local.md
+
+# Local helper that copies MSYS2 runtime DLLs next to the built exe.
+/deploy-dlls.local.sh
