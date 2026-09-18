@@ -106,6 +106,14 @@ public:
       return (double)activeSprite()->totalFrames();
     };
 
+    clazz.addMethod("frameDuration") = [](SpriteSite&, double frame) -> JSON::Value {
+      auto* spr = activeSprite();
+      const int f = static_cast<int>(frame);
+      if (f < 0 || f >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      return (double)spr->frameDuration((doc::frame_t)f);
+    };
+
     clazz.addMethod("newLayer") = [](SpriteSite&, const std::string& requestedName) -> JSON::Value {
       auto* doc = activeDocument();
       auto* spr = activeSprite();
@@ -251,6 +259,39 @@ public:
       doc->getApi(tx).copyFrame(spr, (doc::frame_t)from, (doc::frame_t)newFrame);
       tx.commit();
       return (double)newFrame;
+    };
+
+    clazz.addMethod("setFrameDuration") = [](SpriteSite&, double frame, double msecs) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      const int f = static_cast<int>(frame);
+      if (f < 0 || f >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      const int ms = static_cast<int>(msecs);
+      if (ms < 1 || ms > 65535)
+        throw std::runtime_error{"Frame duration must be between 1 and 65535 milliseconds"};
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).setFrameDuration(spr, (doc::frame_t)f, ms);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("setFrameRangeDuration") = [](SpriteSite&, double fromFrame, double toFrame, double msecs) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      const int from = static_cast<int>(fromFrame);
+      const int to = static_cast<int>(toFrame);
+      if (from < 0 || from >= to)
+        throw std::runtime_error{"setFrameRangeDuration() requires fromFrame < toFrame"};
+      if (to > spr->lastFrame())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      const int ms = static_cast<int>(msecs);
+      if (ms < 1 || ms > 65535)
+        throw std::runtime_error{"Frame duration must be between 1 and 65535 milliseconds"};
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).setFrameRangeDuration(spr, (doc::frame_t)from, (doc::frame_t)to, ms);
+      tx.commit();
+      return {};
     };
 
     clazz.addMethod("removeLayer") = [](SpriteSite&, JSON::Value& value) -> JSON::Value {
