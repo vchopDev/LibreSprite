@@ -177,6 +177,122 @@ public:
       tx.commit();
       return {};
     };
+
+    clazz.addMethod("moveCel") = [](doc::Layer& layer, double fromFrame, JSON::Value& dstLayerValue, double toFrame) -> JSON::Value {
+      if (!layer.isImage())
+        throw std::runtime_error{"moveCel() requires an image layer"};
+      auto* doc = activeDocument();
+      auto* spr = doc->sprite();
+      if (layer.sprite() != spr)
+        throw std::runtime_error{"Layer does not belong to the active sprite"};
+
+      auto* dstLayerRaw = nativeLayer(dstLayerValue, "moveCel() requires a destination Layer");
+      if (!dstLayerRaw->isImage())
+        throw std::runtime_error{"moveCel() requires a destination image Layer"};
+      if (dstLayerRaw->sprite() != spr)
+        throw std::runtime_error{"Destination layer does not belong to the active sprite"};
+
+      const int srcF = static_cast<int>(fromFrame);
+      const int dstF = static_cast<int>(toFrame);
+      if (srcF < 0 || srcF >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      if (dstF < 0 || dstF >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      if (&layer == dstLayerRaw && srcF == dstF)
+        throw std::runtime_error{"moveCel() source and destination must differ"};
+      if (!layer.cel((doc::frame_t)srcF))
+        throw std::runtime_error{"moveCel() requires a cel at the source frame"};
+
+      auto* srcLayerImage = static_cast<doc::LayerImage*>(&layer);
+      auto* dstLayerImage = static_cast<doc::LayerImage*>(dstLayerRaw);
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).moveCel(srcLayerImage, (doc::frame_t)srcF, dstLayerImage, (doc::frame_t)dstF);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("swapCel") = [](doc::Layer& layer, double frame1, double frame2) -> JSON::Value {
+      if (!layer.isImage())
+        throw std::runtime_error{"swapCel() requires an image layer"};
+      auto* doc = activeDocument();
+      auto* spr = doc->sprite();
+      if (layer.sprite() != spr)
+        throw std::runtime_error{"Layer does not belong to the active sprite"};
+
+      const int f1 = static_cast<int>(frame1);
+      const int f2 = static_cast<int>(frame2);
+      if (f1 < 0 || f1 >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      if (f2 < 0 || f2 >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      if (f1 == f2)
+        throw std::runtime_error{"swapCel() frames must differ"};
+
+      auto* layerImage = static_cast<doc::LayerImage*>(&layer);
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).swapCel(layerImage, (doc::frame_t)f1, (doc::frame_t)f2);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("restackAfter") = [](doc::Layer& layer, JSON::Value& afterValue) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = doc->sprite();
+      if (layer.sprite() != spr)
+        throw std::runtime_error{"Layer does not belong to the active sprite"};
+
+      doc::Layer* afterRaw = nullptr;
+      if (!afterValue.isUndefined()) {
+        afterRaw = nativeLayer(afterValue, "restackAfter() requires a Layer, or nothing to move to the front");
+        if (afterRaw->sprite() != spr)
+          throw std::runtime_error{"Layer does not belong to the active sprite"};
+        if (layer.parent() != afterRaw->parent())
+          throw std::runtime_error{"restackAfter() requires both layers to share the same parent"};
+      }
+
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).restackLayerAfter(&layer, afterRaw);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("restackBefore") = [](doc::Layer& layer, JSON::Value& beforeValue) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = doc->sprite();
+      if (layer.sprite() != spr)
+        throw std::runtime_error{"Layer does not belong to the active sprite"};
+
+      auto* beforeRaw = nativeLayer(beforeValue, "restackBefore() requires a Layer");
+      if (beforeRaw->sprite() != spr)
+        throw std::runtime_error{"Layer does not belong to the active sprite"};
+      if (layer.parent() != beforeRaw->parent())
+        throw std::runtime_error{"restackBefore() requires both layers to share the same parent"};
+
+      // Resolved locally via the shared parent's sibling chain, not
+      // DocumentApi::restackLayerBefore()'s sprite-wide flat index - that
+      // walks a global layer index that can cross into a different parent
+      // folder for a "before" layer that isn't first in its own folder but
+      // is first among siblings visible from the root, which would then hit
+      // the same unchecked-bounds `stackLayer()` as a same-parent violation.
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).restackLayerAfter(&layer, beforeRaw->getPrevious());
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("duplicate") = [](doc::Layer& layer) -> JSON::Value {
+      if (!layer.isImage())
+        throw std::runtime_error{"duplicate() requires an image layer"};
+      auto* doc = activeDocument();
+      auto* spr = doc->sprite();
+      if (layer.sprite() != spr)
+        throw std::runtime_error{"Layer does not belong to the active sprite"};
+
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).duplicateLayerAfter(&layer, &layer);
+      tx.commit();
+      return JSON::makeNative(script_api::wrap(layer.getNext()));
+    };
   }
 };
 

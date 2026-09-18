@@ -20,11 +20,14 @@
 #include "app/file/palette_file.h"
 #include "app/transaction.h"
 #include "app/ui_context.h"
+#include "doc/color.h"
+#include "doc/dithering_method.h"
 #include "doc/document.h"
 #include "doc/frame_tag.h"
 #include "doc/frame_tags.h"
 #include "doc/layer.h"
 #include "doc/palette.h"
+#include "doc/pixel_format.h"
 #include "doc/sprite.h"
 #include "gfx/rect.h"
 
@@ -46,6 +49,36 @@ namespace {
     if (!doc)
       throw std::runtime_error{"No active document"};
     return doc->sprite();
+  }
+
+  doc::PixelFormat pixelFormatFromValue(JSON::Value& value) {
+    if (value.isString()) {
+      const auto name = static_cast<std::string>(value);
+      if (name == "rgb") return doc::IMAGE_RGB;
+      if (name == "grayscale") return doc::IMAGE_GRAYSCALE;
+      if (name == "indexed") return doc::IMAGE_INDEXED;
+      if (name == "bitmap") return doc::IMAGE_BITMAP;
+      throw std::runtime_error{"Unknown pixel format: " + name};
+    }
+    const int n = static_cast<int>(value);
+    if (n < doc::IMAGE_RGB || n > doc::IMAGE_BITMAP)
+      throw std::runtime_error{"Pixel format must be rgb, grayscale, indexed, bitmap, or 0..3"};
+    return static_cast<doc::PixelFormat>(n);
+  }
+
+  doc::DitheringMethod ditheringMethodFromValue(JSON::Value& value) {
+    if (value.isUndefined())
+      return doc::DitheringMethod::NONE;
+    if (value.isString()) {
+      const auto name = static_cast<std::string>(value);
+      if (name == "none") return doc::DitheringMethod::NONE;
+      if (name == "ordered") return doc::DitheringMethod::ORDERED;
+      throw std::runtime_error{"Unknown dithering method: " + name};
+    }
+    const int n = static_cast<int>(value);
+    if (n < 0 || n > 1)
+      throw std::runtime_error{"Dithering method must be none, ordered, or 0..1"};
+    return static_cast<doc::DitheringMethod>(n);
   }
 } // namespace
 
@@ -112,6 +145,55 @@ public:
       if (f < 0 || f >= spr->totalFrames())
         throw std::runtime_error{"Frame index is outside the sprite frame range"};
       return (double)spr->frameDuration((doc::frame_t)f);
+    };
+
+    clazz.addMethod("setPixelFormat") = [](SpriteSite&, JSON::Value& formatValue, JSON::Value& ditheringValue) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      const auto format = pixelFormatFromValue(formatValue);
+      const auto dithering = ditheringMethodFromValue(ditheringValue);
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).setPixelFormat(spr, format, dithering);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("setTransparentColor") = [](SpriteSite&, double color) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).setSpriteTransparentColor(spr, (doc::color_t)static_cast<uint32_t>(color));
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("trim") = [](SpriteSite&) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).trimSprite(spr);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("flatten") = [](SpriteSite&) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).flattenLayers(spr);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("newLayerFolder") = [](SpriteSite&, const std::string& requestedName) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      auto* folder = doc->getApi(tx).newLayerFolder(spr);
+      if (!requestedName.empty())
+        folder->setName(requestedName);
+      tx.commit();
+      return JSON::makeNative(wrap(static_cast<doc::Layer*>(folder)));
     };
 
     clazz.addMethod("newLayer") = [](SpriteSite&, const std::string& requestedName) -> JSON::Value {
