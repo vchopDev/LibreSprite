@@ -26,6 +26,7 @@
 #include "doc/layer.h"
 #include "doc/palette.h"
 #include "doc/sprite.h"
+#include "gfx/rect.h"
 
 #include <memory>
 #include <stdexcept>
@@ -195,9 +196,49 @@ public:
       return {};
     };
 
-    // The old implementation was disabled (its body was commented out); kept
-    // as a no-op for API compatibility.
-    clazz.addMethod("crop") = [](SpriteSite&, double, double, double, double) -> JSON::Value {
+    clazz.addMethod("crop") = [](SpriteSite&, double x, double y, double w, double h) -> JSON::Value {
+      if (w <= 0 || h <= 0)
+        throw std::runtime_error{"Crop width and height must be positive"};
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).cropSprite(spr, gfx::Rect((int)x, (int)y, (int)w, (int)h));
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("removeFrame") = [](SpriteSite&, double frame) -> JSON::Value {
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      const int f = static_cast<int>(frame);
+      if (f < 0 || f >= spr->totalFrames())
+        throw std::runtime_error{"Frame index is outside the sprite frame range"};
+      if (spr->totalFrames() <= 1)
+        throw std::runtime_error{"Cannot remove the sprite's last remaining frame"};
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).removeFrame(spr, (doc::frame_t)f);
+      tx.commit();
+      return {};
+    };
+
+    clazz.addMethod("removeLayer") = [](SpriteSite&, JSON::Value& value) -> JSON::Value {
+      if (!value.isNative())
+        throw std::runtime_error{"removeLayer() requires a Layer"};
+      auto& native = value.native();
+      if (native.second != typeid(void) && native.second != typeid(doc::Layer))
+        throw std::runtime_error{"removeLayer() requires a Layer"};
+      auto* rawLayer = static_cast<doc::Layer*>(native.first.get());
+      if (!rawLayer)
+        throw std::runtime_error{"removeLayer() requires a Layer"};
+      auto* doc = activeDocument();
+      auto* spr = activeSprite();
+      if (rawLayer->sprite() != spr)
+        throw std::runtime_error{"Layer does not belong to the active sprite"};
+      if (spr->countLayers() <= 1)
+        throw std::runtime_error{"Cannot remove the sprite's last remaining layer"};
+      app::Transaction tx(app::UIContext::instance(), "Script Execution", app::ModifyDocument);
+      doc->getApi(tx).removeLayer(rawLayer);
+      tx.commit();
       return {};
     };
 

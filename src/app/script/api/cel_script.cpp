@@ -14,6 +14,7 @@
 #include "doc/image.h"
 
 #include <memory>
+#include <stdexcept>
 
 class CelExtension : public Extension {
 public:
@@ -48,6 +49,16 @@ public:
     clazz.addMethod("setPosition") = [](doc::Cel& cel, double x, double y) -> JSON::Value {
       cel.setPosition((int)x, (int)y);
       return {};
+    };
+
+    clazz.addGetter("opacity") = [](doc::Cel& cel) -> JSON::Value {
+      return (double)cel.opacity();
+    };
+    clazz.addSetter("opacity") = [](doc::Cel& cel, JSON::Value& v) {
+      const int opacity = static_cast<int>(v);
+      if (opacity < 0 || opacity > 255)
+        throw std::runtime_error{"Cel opacity must be between 0 and 255"};
+      cel.setOpacity(opacity);
     };
   }
 };
