@@ -8,7 +8,7 @@
 //   libresprite -b --script tests/scripts/sprite_transform.js
 
 const input = "data/splash.ase";
-const output = "build-codex-ucrt/sprite-transform-test.ase";
+const output = "build-legacy/sprite-transform-test.ase";
 
 function assert(condition, message) {
   if (!condition)

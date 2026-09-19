@@ -3,7 +3,7 @@
 //   libresprite -b --script tests/scripts/document_api.js
 
 const input = "data/splash.ase";
-const output = "build-codex-ucrt/document-api-test.ase";
+const output = "build-legacy/document-api-test.ase";
 
 function assert(condition, message) {
   if (!condition)

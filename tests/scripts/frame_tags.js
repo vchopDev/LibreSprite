@@ -3,7 +3,7 @@
 //   libresprite -b --script tests/scripts/frame_tags.js
 
 const input = "data/splash.ase";
-const output = "build-codex-ucrt/frame-tags-test.ase";
+const output = "build-legacy/frame-tags-test.ase";
 
 function assert(condition, message) {
   if (!condition)

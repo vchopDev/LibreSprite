@@ -26,7 +26,7 @@
 //   libresprite -b --script tests/scripts/layer_restack.js
 
 const input = "data/splash.ase";
-const output = "build-codex-ucrt/layer-restack-test.ase";
+const output = "build-legacy/layer-restack-test.ase";
 
 function assert(condition, message) {
   if (!condition)

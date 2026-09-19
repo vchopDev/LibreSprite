@@ -16,7 +16,7 @@
 //   libresprite -b --script tests/scripts/cel_transfer.js
 
 const input = "data/splash.ase";
-const output = "build-codex-ucrt/cel-transfer-test.ase";
+const output = "build-legacy/cel-transfer-test.ase";
 
 function assert(condition, message) {
   if (!condition)

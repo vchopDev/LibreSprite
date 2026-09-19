@@ -16,7 +16,7 @@
 //   libresprite -b --script tests/scripts/move_copy_frame.js
 
 const input = "data/splash.ase";
-const output = "build-codex-ucrt/move-copy-frame-test.ase";
+const output = "build-legacy/move-copy-frame-test.ase";
 
 function assert(condition, message) {
   if (!condition)

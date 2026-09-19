@@ -12,7 +12,7 @@
 // Requires C:\msys64\ucrt64\bin on PATH for an MSYS2-built binary.
 
 const input = "data/splash.png";
-const output = "build-codex-ucrt/png-layers-repro.ase";
+const output = "build-legacy/png-layers-repro.ase";
 
 function assert(condition, message) {
   if (!condition)
