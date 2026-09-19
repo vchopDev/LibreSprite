@@ -14,6 +14,8 @@
 
 # CMake output
 build
+/build-headless-api
+/build-legacy
 
 # Snap related
 /parts
